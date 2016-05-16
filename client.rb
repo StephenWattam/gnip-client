@@ -24,7 +24,8 @@ require 'net/http'
 require 'uri'
 require 'base64'
 require 'openssl'
-
+require 'zlib'
+require 'resolv-replace.rb' # Use a ruby DNS resolver
 
 # Make a HTTP request to a JSON API,
 # returning the result as an object
@@ -89,7 +90,9 @@ def get_job(uuid, username, password)
   jobs = get_json('jobs.json', username, password)
   job = jobs['jobs'].find { |j| j['uuid'] == uuid }
 
-  require 'pry'; pry binding
+  if job['jobURL']
+    job.merge!(get_json(job['jobURL'], username, password, ''))
+  end
 
   fail "Could not find job with UUID=#{uuid}" unless job
   job
@@ -113,6 +116,12 @@ def summarise_job(job, indent = 0)
     s.puts "            #{job['quote']['estimatedDurationHours']} hours"
     s.puts "            #{job['quote']['estimatedFileSizeMb']} MB"
     s.puts "            expires at #{job['quote']['expiresAt']}"
+  end
+  if job['results']
+    r = job['results']
+    s.puts "Results:    #{r['activityCount']} activities"
+    s.puts "            #{r['fileSizeMb']} MB (#{r['fileCount']} files)"
+    s.puts "            Completed #{r['completedAt']}, expires #{r['expiresAt']}"
   end
 
   str = ''
@@ -163,6 +172,7 @@ def start_job(uuid, username, password, accept = true)
   job = get_job(uuid, username, password)
   puts "Job info:"
   puts summarise_job(job, 2)
+  puts ""
 
   if job['status'] == 'rejected'
     puts "Job has already been rejected."
@@ -174,6 +184,44 @@ def start_job(uuid, username, password, accept = true)
   res = put_json(job['jobURL'], payload, username, password, '')
 
   puts "Job status: #{res['status']}: #{res['statusMessage']}"
+end
+
+# Download stuff from a job
+def download_job(uuid, out_fn, username, password)
+  puts "Downloading data from job #{uuid} to #{out_fn}"
+  fail "Output file exists!" if File.exist?(out_fn)
+
+  job = get_job(uuid, username, password)
+  puts "Job info:"
+  puts summarise_job(job, 2)
+  puts ""
+
+  # Download stuff.
+  puts "Retrieving index..."
+  index = get_json(job['results']['dataURL'], username, password, '')
+
+  num_files = index['urlCount']
+  puts "Retrieving #{num_files} files..."
+  
+  i = 0
+  File.open(out_fn, 'w') do |out|
+    index['urlList'].each do |url|
+      i += 1
+      print " #{i} / #{num_files} (#{((i.to_f / num_files.to_f) * 100.0).round(2)}%)      \r"
+
+      begin
+        # RAW HTTP get request
+        res = Net::HTTP.get(URI(url))
+        zlibr = Zlib::GzipReader.new(StringIO.new(res.to_s))
+        out.puts zlibr.read
+      rescue StandardError => e
+        print "\n*** ERR on file #{i}, URL: #{url}\n"
+      end
+      
+    end # /url iteration
+  end # /file handle
+
+  print "Done\n"
 end
 
 
@@ -190,7 +238,7 @@ if !subcommand || subcommand.downcase == 'help'
   warn "  new JOB_FILE UNAME PASS: get a quote for a new job"
   warn "  accept JOB_ID UNAME PASS: accept (start) a quoted job"
   warn "  reject JOB_ID UNAME PASS: reject a quoted job"
-  warn "  download JOB_ID UNAME PASS: download files from a completed job"
+  warn "  download JOB_ID OUT_FILE UNAME PASS: download files from a completed job to DIR"
   warn "  help : show this help"
   warn ""
   warn "To configure this script, edit the constants"
@@ -228,6 +276,12 @@ case subcommand
     uname = ARGV.shift
     pass = ARGV.shift
     start_job(uuid, uname, pass, false)
+  when :download
+    uuid = ARGV.shift
+    out_fn = ARGV.shift
+    uname = ARGV.shift
+    pass = ARGV.shift
+    download_job(uuid, out_fn, uname, pass)
   else
     warn "Unknown subcommand: '#{subcommand}'"
 end
