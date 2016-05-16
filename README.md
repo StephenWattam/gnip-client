@@ -36,3 +36,30 @@ Job specification is done using the same format Gnip uses, as standalone JSON fi
     ]
 }
 ````
+
+
+## Example
+
+````
+[wattams@rho gnip-client]$ ./client.rb download mm2p988zv1 /tmp/job3 s.wattam@lancaster.ac.uk my_gnip_password
+Downloading data from job mm2p988zv1 to /tmp/job3
+Job info:
+  Gnip ID:    mm2p988zv1
+  Title:      "Testjob1"
+  From 201601130000 to 201601150000
+  Publisher:  twitter
+  Requested:  by s.wattam@lancaster.ac.uk at 2016-05-16T14:34:53Z
+  Status:     delivered: Job delivered and available for download.
+  Completion: 100%
+  Estimate:   3000 activities
+              1.0 hours
+              2.55 MB
+              expires at 2016-05-23T14:37:18Z
+  Results:    2668 activities
+              1.34 MB (288 files)
+              Completed 2016-05-16T14:49:29Z, expires 2016-05-31T14:48:15Z
+
+Retrieving index...
+Retrieving 288 files...
+ 69 / 288 (23.9%)
+````
