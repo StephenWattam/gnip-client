@@ -1,0 +1,1 @@
+{"title": "HPT_test_job","publisher": "Twitter","streamType":"track","dataFormat":"activity-streams","fromDate":"201401010000","toDate":"201401020000 ","rules":[{"value": "twitter_lang:en (snow OR snowing)","tag": "2014_01_01_snow"}]}

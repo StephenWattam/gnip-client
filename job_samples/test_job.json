@@ -1,0 +1,12 @@
+{
+    "publisher"     : "twitter",
+    "streamType"    : "track",
+    "dataFormat"    : "activity-streams",
+    "fromDate"      : "201601130000",
+    "toDate"        : "201601150000",
+    "title"         : "Testjob1",
+    "rules" : [
+        {"value": "teapot", "tag": "teapot"} 
+    ]
+}
+
