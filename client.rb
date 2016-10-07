@@ -155,8 +155,8 @@ def new_job(job, username, password)
   puts JSON.pretty_generate(job)
   puts ""
   res = post_json('jobs.json', job, username, password)
-  if res['error']
-    puts "Job rejected (error #{res['status']}): #{res['error']}"
+  if res['error'] || res['status'] == 'error'
+    puts "Job rejected (error #{res['status']}): #{res['error'] || res['reason']}"
     return
   end
 
